@@ -1,8 +1,6 @@
 #!/bin/bash
 #
 
-set -e
-
 log() {
   echo "$1"
 }
@@ -86,17 +84,21 @@ if [ -f $config_path ]; then
   ifdown wlan0 &>/dev/null
   ifconfig wlan0 10.99.99.1
   ifup wlan0
+  sleep 5
 
   log "Restarting services"
 
   systemctl daemon-reload
-  systemctl restart networking
+  #systemctl restart networking JLC
+  systemctl enable dnsmasq
   systemctl restart dnsmasq
   systemctl stop hostapd
 
   # hostapd won't use new config if it has been changed.
   # `sleep` seems to make it work
   sleep 5
+  systemctl unmask hostapd #JLC added
+  systemctl enable hostapd #JLC added
   systemctl start hostapd
 
   log "Access point UP"
@@ -134,9 +136,9 @@ else
 
   systemctl restart networking
 
-  wpa_pid=$(pgrep wpa_supplicant)
-  if [ -n "$wpa_pid" ]; then
+  if pgrep wpa_supplicant; then
     log "Stopping wpa_supplicant"
+    wpa_pid=$(pgrep wpa_supplicant)
     kill "$wpa_pid"
   fi
 
